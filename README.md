@@ -14,8 +14,15 @@ go build lomy
 
 ... and then run it with
 ```shell
-./lomy --address=<peerAddress:port>
+./lomy [-peerAddress=<peer hostname/ip:port>] [-listeningPort=<port>]
 ```
+At least one of these arguments must be provided. If `-peerAddress` is set the program
+will attempt connecting to the target. If `-listeningPort` is set the program will sit
+listening for a connection on that port. If both are set one attempt will be made to reach
+`peerAddress` and if that fails the program will listen on `listeningPort` instead.
+
+Your peer must be waiting in listening mode for your `peerAddress` connection attempt to
+succeed.
 
 
 ### How its structured
@@ -31,6 +38,12 @@ retrieving messages and one for sending them.
 [tview](https://github.com/rivo/tview) library). Here too the API is simple. The
 `WriteToTextView (string)` method writes a line to the chat; and the `InputFieldQueue` 
 property provides a channel for receiving user input.
+
+The 'listener' user may need to modify their machine's firewall to allow the 
+program to receive incoming connections. On MacOS, this can be done in
+`System Preferences` > `Security & Privacy` > `Firewall` > `Firewall Options...`. Here 
+you must unselect "Block all incoming connections" and add the `lomy` program to the 
+allow-list.
 
 
 ### Missing features

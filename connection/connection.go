@@ -2,8 +2,10 @@ package connection
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"net"
+	"os"
 )
 
 // Connection represents an active TCP connection.
@@ -20,12 +22,11 @@ type Connection struct {
 
 // NewConnection Create and initialise a new Connection object.
 // Note that this object must be closed with Connection.Close().
-func NewConnection(targetAddress string) Connection {
-	netConn := initiateConnection(targetAddress)
-	if netConn == nil {
-		// No one was listening on the other end. Let's become listeners ourselves.
-		netConn = listenForConnection(targetAddress)
-	}
+//
+// A connection attempt is first made against `peerAddress` (if it's not zero valued).
+// If that fails listen for incoming connections on `listeningPort` (if it's not zero-valued).
+func NewConnection(peerAddress string, listeningPort uint) Connection {
+	netConn := connectToPeer(peerAddress, listeningPort)
 
 	internalSendQueue := make(chan string, 4)
 	internalRecvQueue := make(chan string, 4)
@@ -43,27 +44,42 @@ func NewConnection(targetAddress string) Connection {
 	return connection
 }
 
-func initiateConnection(targetAddress string) net.Conn {
-	conn, err := net.Dial("tcp", targetAddress)
-	if err != nil {
+func connectToPeer(peerAddress string, listeningPort uint) net.Conn {
+	if peerAddress != "" {
+		conn := dialPeerOrNil(peerAddress)
+		if conn != nil {
+			return conn
+		}
 		log.Println("Connection attempt failed because no Listener was found on the" +
-			" other end. Switching to Listening mode.")
-		return nil
+			" other end.")
+
+		if listeningPort != 0 {
+			log.Println("Switching to Listening mode.")
+		} else {
+			os.Exit(1)
+		}
 	}
+
+	return listenForPeer(listeningPort)
+}
+
+func dialPeerOrNil(peerAddress string) net.Conn {
+	log.Printf("Dialing '%s'...\n", peerAddress)
+	conn, _ := net.Dial("tcp", peerAddress)
 	return conn
 }
 
-func listenForConnection(targetAddress string) net.Conn {
-	log.Println("Listening for incoming Connection...")
-	ln, err := net.Listen("tcp", targetAddress)
+func listenForPeer(listeningPort uint) net.Conn {
+	listeningAddress := fmt.Sprintf(":%d", listeningPort)
+	log.Printf("Listening for incoming Connection at '%s'...\n", listeningAddress)
+	listener, err := net.Listen("tcp", listeningAddress)
 	if err != nil {
 		log.Fatalln("Error: ", err)
 	}
-	conn, err := ln.Accept()
+	conn, err := listener.Accept()
 	if err != nil {
 		log.Fatalln("Error: ", err)
 	}
-	log.Println("Connection acquired!")
 	return conn
 }
 
