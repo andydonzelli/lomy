@@ -2,7 +2,7 @@
 # Lomy Chat
 
 This is a simple peer-to-peer chat program that lives inside your Terminal. It's a 
-small toy project allowing me to refamiliarise myself with Go.
+small toy project to refamiliarise myself with Go.
 
 ![screenshot.png](images%2Fscreenshot.png)
 
@@ -24,8 +24,14 @@ listening for a connection on that port. If both are set one attempt will be mad
 Your peer must be waiting in listening mode for your `peerAddress` connection attempt to
 succeed.
 
+The 'listener' user may need to modify their machine's firewall to allow the 
+program to receive incoming connections. On MacOS, this can be done in
+`System Preferences` > `Security & Privacy` > `Firewall` > `Firewall Options...`. Here 
+you must unselect "Block all incoming connections" and add the `lomy` program to the 
+allow-list.
 
-### How its structured
+
+### How it's structured
 
 The entrypoint, as you would expect, is [main.go](main.go). It calls out to two 
 packages, `connection.go` and `tui.go`.
@@ -38,12 +44,6 @@ retrieving messages and one for sending them.
 [tview](https://github.com/rivo/tview) library). Here too the API is simple. The
 `WriteToTextView (string)` method writes a line to the chat; and the `InputFieldQueue` 
 property provides a channel for receiving user input.
-
-The 'listener' user may need to modify their machine's firewall to allow the 
-program to receive incoming connections. On MacOS, this can be done in
-`System Preferences` > `Security & Privacy` > `Firewall` > `Firewall Options...`. Here 
-you must unselect "Block all incoming connections" and add the `lomy` program to the 
-allow-list.
 
 
 ### Missing features
@@ -58,3 +58,4 @@ I'd like to add sometime soon.
 - [ ] Move the initial user messaging into the TUI. Currently, we log some information 
   to stdout until a Connection is made. That could be shown as a modal within the TUI 
   instead (hovering over the chat UI).
+
