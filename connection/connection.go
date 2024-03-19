@@ -8,40 +8,55 @@ import (
 	"os"
 )
 
-// Connection represents an active TCP connection.
-// Users can send messages by writing to buffered channel Connection.SendQueue,
-// and can receive messages by writing to buffered channel Connection.RecvQueue.
-type Connection struct {
-	SendQueue chan<- string
-	RecvQueue <-chan string
-
-	internalSendQueue chan string
-	internalRecvQueue chan string
-	netConn           net.Conn
+type Connection interface {
+	RetrieveMessage() string
+	SendMessage(string)
+	Close()
 }
 
-// NewConnection Create and initialise a new Connection object.
-// Note that this object must be closed with Connection.Close().
+// BaseConnection represents an active TCP connection.
+// Messages can be sent through this connection with SendMessage(string)`.
+// Received messages can be read with `RetrieveMessage() string`.
+// The implementation uses buffered channels for both sending and receiving queues to improve performance.
+type BaseConnection struct {
+	sendQueue chan string
+	recvQueue chan string
+	netConn   net.Conn
+}
+
+// NewConnection Create and initialise a new BaseConnection object.
+// Note that this object must be closed with BaseConnection.Close().
 //
 // A connection attempt is first made against `peerAddress` (if it's not zero valued).
 // If that fails listen for incoming connections on `listeningPort` (if it's not zero-valued).
-func NewConnection(peerAddress string, listeningPort uint) Connection {
+func NewConnection(peerAddress string, listeningPort uint) BaseConnection {
 	netConn := connectToPeer(peerAddress, listeningPort)
 
-	internalSendQueue := make(chan string, 4)
-	internalRecvQueue := make(chan string, 4)
+	sendQueue := make(chan string, 4)
+	recvQueue := make(chan string, 4)
 
-	connection := Connection{
-		netConn:           netConn,
-		internalSendQueue: internalSendQueue,
-		internalRecvQueue: internalRecvQueue,
-		SendQueue:         internalSendQueue,
-		RecvQueue:         internalRecvQueue,
+	connection := BaseConnection{
+		netConn:   netConn,
+		sendQueue: sendQueue,
+		recvQueue: recvQueue,
 	}
 	go connection.handleSendQueue()
 	go connection.handleRecvQueue()
 
 	return connection
+}
+
+func (c BaseConnection) RetrieveMessage() string {
+	message := <-c.recvQueue
+	return message
+}
+
+func (c BaseConnection) SendMessage(message string) {
+	c.sendQueue <- message
+}
+
+func (c BaseConnection) Close() {
+	c.netConn.Close()
 }
 
 func connectToPeer(peerAddress string, listeningPort uint) net.Conn {
@@ -83,27 +98,23 @@ func listenForPeer(listeningPort uint) net.Conn {
 	return conn
 }
 
-func (c *Connection) handleRecvQueue() {
+func (c *BaseConnection) handleRecvQueue() {
 	for {
 		recvMessage, err := bufio.NewReader(c.netConn).ReadString('\n')
 		if err != nil {
 			log.Fatal(err)
 		}
-		c.internalRecvQueue <- recvMessage
+		c.recvQueue <- recvMessage
 	}
 }
 
-func (c *Connection) handleSendQueue() {
+func (c *BaseConnection) handleSendQueue() {
 	for {
-		messageToSend := <-c.internalSendQueue
+		messageToSend := <-c.sendQueue
 
 		_, err := c.netConn.Write([]byte(messageToSend + "\n"))
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}
-}
-
-func (c *Connection) Close() {
-	c.netConn.Close()
 }

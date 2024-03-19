@@ -18,15 +18,15 @@ func main() {
 
 	go func() {
 		for {
-			receivedMessage := <-conn.RecvQueue
+			receivedMessage := conn.RetrieveMessage()
 			tuiApp.WriteToTextView("Them: " + receivedMessage)
 		}
 	}()
 
 	go func() {
 		for {
-			messageToSend := <-tuiApp.InputFieldQueue
-			conn.SendQueue <- messageToSend
+			messageToSend := tuiApp.ReadInputLine()
+			conn.SendMessage(messageToSend)
 		}
 	}()
 

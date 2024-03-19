@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -9,7 +10,7 @@ import (
 const REGION_ID = "my_messages_region"
 
 type Tui struct {
-	InputFieldQueue <-chan string
+	inputFieldQueue <-chan string
 	app             *tview.Application
 	textView        *tview.TextView
 	inputField      *tview.InputField
@@ -32,7 +33,7 @@ func CreateTui() Tui {
 		app:             app,
 		textView:        textView,
 		inputField:      inputField,
-		InputFieldQueue: inputFieldQueue,
+		inputFieldQueue: inputFieldQueue,
 	}
 }
 
@@ -40,6 +41,11 @@ func (tui *Tui) RunAppAndBlock() {
 	if err := tui.app.Run(); err != nil {
 		panic(err)
 	}
+}
+
+func (tui *Tui) ReadInputLine() string {
+	inputValue := <-tui.inputFieldQueue
+	return inputValue
 }
 
 func (tui *Tui) WriteToTextView(str string) {

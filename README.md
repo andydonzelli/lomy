@@ -35,13 +35,13 @@ The entrypoint, as you would expect, is [main.go](main.go). It calls out to two 
 `connection.go` and `tui.go`.
 
 [connection.go](connection/connection.go) encapsulates the network connection with the peer. The
-API is simple: the returned struct exposes two string channels, one for retrieving messages and one
-for sending them.
+API is simple: `SendMessage(string)` sends a message through the connection;
+`RetrieveMessage() string` returns any recieved messages. Both inbound and outbound messages are
+held in buffered channels to improve performance.
 
 [tui.go](tui/tui.go) encapsulates the terminal user interface (written using the
-[tview](https://github.com/rivo/tview) library). Here too the API is simple. The
-`WriteToTextView (string)` method writes a line to the chat; and the `InputFieldQueue` property
-provides a channel for receiving user input.
+[tview](https://github.com/rivo/tview) library). Here too the API is simple:
+`WriteToTextView(string)` writes a line to the chat; `ReadInputLine() string` reads user input.
 
 ### Missing features
 
