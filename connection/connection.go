@@ -9,7 +9,7 @@ import (
 )
 
 type Connection interface {
-	RetrieveMessage() string
+	RetrieveMessage() (string, error)
 	SendMessage(string)
 	Close()
 }
@@ -46,9 +46,9 @@ func NewConnection(peerAddress string, listeningPort uint) BaseConnection {
 	return connection
 }
 
-func (c BaseConnection) RetrieveMessage() string {
+func (c BaseConnection) RetrieveMessage() (string, error) {
 	message := <-c.recvQueue
-	return message
+	return message, nil
 }
 
 func (c BaseConnection) SendMessage(message string) {

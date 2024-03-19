@@ -9,16 +9,22 @@ import (
 )
 
 func main() {
-	peerAddress, listeningPort := parseCliArgs()
+	peerAddress, listeningPort, encryptionSecret := parseCliArgs()
 
-	conn := connection.NewConnection(peerAddress, listeningPort)
+	var conn connection.Connection
+	if encryptionSecret == "" {
+		conn = connection.NewConnection(peerAddress, listeningPort)
+	} else {
+		conn = connection.NewEncryptedConnection(peerAddress, listeningPort, encryptionSecret)
+	}
 	defer conn.Close()
 
 	tuiApp := tui.CreateTui()
 
 	go func() {
 		for {
-			receivedMessage := conn.RetrieveMessage()
+			receivedMessage, err := conn.RetrieveMessage()
+			exitIfDecryptionFailed(err, receivedMessage)
 			tuiApp.WriteToTextView("Them: " + receivedMessage)
 		}
 	}()
@@ -33,12 +39,14 @@ func main() {
 	tuiApp.RunAppAndBlock()
 }
 
-func parseCliArgs() (string, uint) {
+func parseCliArgs() (string, uint, string) {
 	helpPtr := flag.Bool("help", false, "Print usage information")
+
 	peerAddressPtr := flag.String("peerAddress", "", "Peer's address and port. E.g., "+
 		"'192.168.0.18:9000'")
 	listeningPortPtr := flag.Uint("listeningPort", 0,
 		"Port on which to listen for incoming connections. E.g., '9000'")
+	encryptionSecretPtr := flag.String("encryptionSecret", "", "[Optional] Shared secret for encryption")
 
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
@@ -63,5 +71,12 @@ func parseCliArgs() (string, uint) {
 		os.Exit(1)
 	}
 
-	return *peerAddressPtr, *listeningPortPtr
+	return *peerAddressPtr, *listeningPortPtr, *encryptionSecretPtr
+}
+
+func exitIfDecryptionFailed(err error, decryptedMessage string) {
+	if err != nil || decryptedMessage[len(decryptedMessage)-1] != '\n' {
+		fmt.Println("Message decryption failed. Check you are using the same secret as your peer.")
+		os.Exit(1)
+	}
 }
